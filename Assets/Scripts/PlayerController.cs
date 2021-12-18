@@ -28,17 +28,10 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         Move(new Vector3(Input.GetAxisRaw("Horizontal"), 0, Input.GetAxisRaw("Vertical"))*speed*Time.deltaTime);
-        if(Input.GetKeyDown(KeyCode.L)){
-            Move(new Vector3(0, 0, 100));
-        }
     }
     public void Move(Vector3 move){
+        Vector3 startPos = transform.position;
         RaycastHit hit;
-        RaycastHit[] capsuleHits;
-                    DrawVector(transform.position, move, 1, Color.black);
-                    //DrawVector(transform.position, perpendicular2, 100, Color.blue);
-                    DrawVector(transform.position, move, 100, Color.black);
-                    //DrawVector(transform.position, perpendicular1, 100, Color.blue);
         if(Physics.Linecast(transform.position, transform.position + move, out hit)){
             Vector3 leftOverVector = transform.position + move - hit.point;
             leftOverVector -= hit.normal * Vector3.Dot(hit.normal, leftOverVector);
@@ -46,17 +39,52 @@ public class PlayerController : MonoBehaviour
             Debug.Log("linetest");
         }else{
             Vector3[] capsuleTip1 = {transform.position-Vector3.up*height/2, transform.position+Vector3.up*height/2}; 
-                //Debug.Log("cpasuletest");
-                /*if(Physics.CapsuleCast(capsuleTip1[0], capsuleTip1[1], radius, move.normalized, out hit, move.magnitude)){
-                    if(Vector3.Distance(transform.position, hit.point - move.normalized * radius) > 0){
-                        //transform.position = hit.point - move.normalized * radius;
-                        //calculate funny vectors to fix capsulecast weird behaviour of setting hitpoints close to y = 0
-                    }else{
-                        transform.position += move;                        
-                    }
+                if(Physics.CapsuleCast(capsuleTip1[0], capsuleTip1[1], radius, move.normalized, out hit, move.magnitude)){
+                        Vector3 translation = hit.point - transform.position;
+                        Vector3 perpendicular1 = Vector3.Cross(move, Vector3.up).normalized;
+                        Vector3 perpendicular2 = Vector3.Cross(perpendicular1, move).normalized;
+                        float dot1 = Vector3.Dot(translation, perpendicular1);
+                        float dot2 = Vector3.Dot(translation, perpendicular2);
+                        translation -= dot1 * perpendicular1 + dot2 * perpendicular2;
+                        DrawVector(transform.position, translation, 10, Color.red);
+                        transform.position += translation;
                 }else{
                     transform.position += move;
-                }*/
+                }
+            }
+        Vector3 hitDirection = Vector3.zero;
+        float minSeparation = 0;
+        Vector3 averageNormal = Vector3.zero;
+        Vector3 collisionPoint = Vector3.zero;
+        for(int i = 0; i<=8; i++){
+            Vector3[] capsuleTip = {transform.position-Vector3.up*height/2, transform.position+Vector3.up*height/2}; 
+            collisions = Physics.OverlapCapsule(capsuleTip[0], capsuleTip[1], radius, ~layerMask);
+            foreach(Collider col in collisions){
+                bool overlap = Physics.ComputePenetration(playerCollider, transform.position, transform.rotation, col, col.transform.position, col.transform.rotation, out hitDirection, out minSeparation);
+                collisionPoint = playerCollider.ClosestPoint(transform.position - hitDirection.normalized * height*10);
+                DrawVector(collisionPoint, hitDirection, 100, Color.cyan);
+                averageNormal += hitDirection;
+                Debug.Log(overlap);
+                if(overlap){
+                    if(i <= 4)transform.position += hitDirection * minSeparation * 1.03f;
+                    else if (i <= 6){
+                        transform.position += move.normalized * minSeparation;
+                    }
+                    else{
+                        transform.position = startPos;
+                        AlternateMove(move);
+                        break;
+                    };
+                }else{
+                    break;
+                }
+            }
+        }
+        DrawVector(collisionPoint, averageNormal, 100, Color.red);
+    }
+        public void AlternateMove(Vector3 move){
+        RaycastHit[] capsuleHits;
+            Vector3[] capsuleTip1 = {transform.position-Vector3.up*height/2, transform.position+Vector3.up*height/2}; 
                 capsuleHits = Physics.CapsuleCastAll(capsuleTip1[0], capsuleTip1[1], radius, move.normalized, move.magnitude);
                 if(capsuleHits.Length > 0){
                     List<Vector3> hitPositions = new List<Vector3>();
@@ -90,7 +118,6 @@ public class PlayerController : MonoBehaviour
                 }else{
                     transform.position += move;
                 }
-        }
         Vector3[] capsuleTip = {transform.position-Vector3.up*height/2, transform.position+Vector3.up*height/2}; 
         collisions = Physics.OverlapCapsule(capsuleTip[0], capsuleTip[1], radius, ~layerMask);
         foreach(Collider col in collisions){
@@ -106,4 +133,5 @@ public class PlayerController : MonoBehaviour
     public void DrawVector(Vector3 origin, Vector3 vector, float lengthMultiplier, Color color){
         Debug.DrawLine(origin, origin + vector * lengthMultiplier, color);
     }
+    
 }

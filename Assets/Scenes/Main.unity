@@ -155,7 +155,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   height: 2
-  speed: 50
+  speed: 45
   radius: 0.5
   collisions: []
 --- !u!23 &860694680
